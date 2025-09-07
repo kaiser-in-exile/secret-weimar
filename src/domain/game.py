@@ -4,12 +4,14 @@ from typing import Optional
 
 MAX_POLICIES_ON_BOARD = 5
 
-class Role(Enum):
+class SecretRole(Enum):
     LIBERAL=0
     FASCIST=1
     HITLER=2
-    PRESIDENT=3
-    CHANCELLOR=4
+
+class Office(Enum):
+    PRESIDENT = "president"
+    CHANCELLOR = "chancellor"
 
 class RoundState(Enum):
     CHANCELLOR_CHOOSING=0
@@ -45,7 +47,8 @@ class Player:
     Represents a single player
     TODO: hook up to a layer which can drive this logic
     """
-    roles: list[Role]
+    secret_role: SecretRole;
+
 
 class Game:
     """
@@ -58,20 +61,32 @@ class Game:
     rounds: int
     current_round_state: RoundState
 
-    # Per round information
-    current_president: Player
-    current_chancellor: Optional[Player]
+    offices: dict[Office, Optional[Player]]
+
+    def assign_office(self, office: Office, player: Player):
+        self.offices[office] = player;
+
+    def clear_office(self, office: Office):
+        self.offices[office] = None
+
+    def get_office_holder(self, office: Office):
+        return self.offices[office]
 
 players = []
 
 def game_loop(game: Game):
-    [president] = [player for player in game.players if Role.PRESIDENT in player.roles]
+    president = game.get_office_holder(Office.PRESIDENT);
     game.current_round_state = RoundState.CHANCELLOR_CHOOSING
     # TODO: ask the player who is president for chancellor (need a clean way to ask for this)
     game.current_round_state = RoundState.LEGITIMANCY_VOTE
     # TODO: ask all players to vote on legitimacy of the government
-    [chancellor] = [player for player in game.players if Role.CHANCELLOR in player.roles]
-    if Role.HITLER in chancellor.roles:
+    chancellor = game.get_office_holder(Office.CHANCELLOR)
+    if chancellor == None:
+        # no chancellor was chosen this round
+        # move to next round
+        return
+
+    if chancellor.secret_role == SecretRole.HITLER:
         print("Fascists win!");
         return
     game.current_round_state = RoundState.POLICY_PICKING
